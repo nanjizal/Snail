@@ -1,0 +1,4 @@
+#-cmd haxe generate.hxml
+-cmd haxelib run dox -i output.xml --title "snail API documentation" -D themeColor 0x5490A4 -D source-path https://github.com/nanjizal/snail/tree/master/src/ --toplevel-package snail
+-cmd cd pages
+-cmd open index.html
