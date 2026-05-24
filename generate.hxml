@@ -1,0 +1,7 @@
+-D doc-gen
+--macro include('snail')
+-cp src
+-main snail.snailDoc
+--no-output
+-xml output.xml
+-js foo
