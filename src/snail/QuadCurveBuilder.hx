@@ -16,18 +16,23 @@ enum abstract OptimizationMode(Int) {
 class QuadCurveBuilder {
     public var curves( default, null ): Buffer;
     public var curveBounds( default, null ): Buffer;
+    public var indices(default, null):Array<Int>;
+    public var pointers(default, null):Array<Int>;
     var count:Int = 0;
     // pen position
     var ax: Float = 0.;
     var ay: Float = 0.;
-    public function new( size: Int = 2048 ) {
+    public function new( size: Int = 2048, bands: Int = 32 ) {
         #if (cpp || cppia || hl || jvm || java)
-            this.curves = new haxe.ds.Vector<Float>( size );
-            this.curveBounds = new haxe.ds.Vector<Float>( Std.int(size / 2) );
+            curves = new haxe.ds.Vector<Float>( size );
+            curveBounds = new haxe.ds.Vector<Float>( Std.int(size / 2) );
         #else
-            this.curves = new Array<Float>();
-            this.curveBounds = new Array<Float>();
+            curves = new Array<Float>();
+            curveBounds = new Array<Float>();
         #end
+        indices = new Array<Int>();
+        pointers = new Array<Int>();
+        pointers.resize(bands * 2);
     }
     public inline
     function clear():Void {
@@ -42,6 +47,7 @@ class QuadCurveBuilder {
     function get_length():Int { 
         return count << 2; 
     }
+    
     public inline
     function pushYbounds( ay: Float, by: Float, cy: Float ): Void {
         var i = count << 1; 
@@ -50,6 +56,41 @@ class QuadCurveBuilder {
         var bc = (by < cy);
         curveBounds[i]     = ab ? (ac ? ay : cy) : (bc ? by : cy);
         curveBounds[i + 1] = ab ? (bc ? cy : by) : (ac ? cy : ay);
+    }
+    public function calcBands( bands: Int, minY: Float, maxY: Float ): Void {
+        var n = count;
+        if (n == 0) return;
+        var b = curveBounds;
+        var h = maxY - minY;
+        if (h <= 0.0) h = 1.0;
+        var stride = h / bands;
+        var buckets = [for (i in 0...bands) new Array<Int>()];
+        // Scan and bin curve IDs into row buckets
+        for( i in 0...n ){
+            var j = i << 1;
+            var y0 = b[ j ];
+            var y1 = b[ j + 1] ;
+            var r0 = Std.int(( y0 - minY ) / stride);
+            var r1 = Std.int(( y1 - minY ) / stride);
+            if( r0 < 0 ) r0 = 0;
+            if( r1 >= bands ) r1 = bands - 1;
+            for( r in r0...( r1 + 1 ) ) buckets[ r ].push( i );
+        }
+        this.indices.resize(0);
+        if (this.pointers.length != bands * 2) {
+            this.pointers.resize(bands * 2);
+        }
+        // Flatten directly into the class properties
+        var offset = 0;
+        for( r in 0...bands ){
+            var bucket = buckets[ r ];
+            var len = bucket.length;
+            var k = r << 1;
+            pointers[ k ]     = offset;
+            pointers[ k + 1 ] = len;
+            for( i in 0...len ) indices.push( bucket[ i ] );
+            offset += len;
+        }
     }
     public inline
     function moveTo( x: Float, y: Float ){
