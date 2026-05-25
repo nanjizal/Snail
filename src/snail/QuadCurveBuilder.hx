@@ -153,7 +153,7 @@ class QuadCurveBuilder {
         // make sure pen is correct
         ax = splitX;
         ay = splitY;
-        subdivideAccurate( splitY, midR1x, midR1y, midR2x, midR2y, dx, dy, errorMarginSquared, nextDepth, maxDepth );
+        subdivideAccurate( splitX, splitY, midR1x, midR1y, midR2x, midR2y, dx, dy, errorMarginSquared, nextDepth, maxDepth );
     }
 
     function subdividePerformance(  bx: Float, by: Float
