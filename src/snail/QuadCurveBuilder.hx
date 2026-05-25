@@ -15,7 +15,10 @@ enum abstract OptimizationMode(Int) {
 
 class QuadCurveBuilder {
     public var curves( default, null ): Buffer;
-    private var writeIndex:Int = 0;
+    var count:Int = 0;
+    // pen position
+    var ax: Float = 0.;
+    var ay: Float = 0.;
     public function new( size: Int = 2048 ) {
         #if (cpp || cppia || hl || jvm || java)
             this.curves = new haxe.ds.Vector<Float>( size );
@@ -30,66 +33,70 @@ class QuadCurveBuilder {
             this.curves.resize( 0 );
         #end
     }
-    public var length(get, null):Int;
+    public var length(get, null): Int;
     private inline
     function get_length():Int { 
-        return writeIndex; 
+        return count << 2; 
     }
     public inline
-    function addLine( p0x: Float, p0y: Float
-                    , p2x: Float, p2y: Float ): Int {
-        var idx = _writeIndex;
+    function moveTo( x: Float, y: Float ){
+        ax = x;
+        ay = y;
+    }
+    public inline
+    function lineTo( bx: Float, by: Float ): Int {
+        var idx = count << 2;
         // midpoint
-        var q1x = (p0x + p2x) * 0.5;
-        var q1y = (p0y + p2y) * 0.5;
-        curves[ idx ]     = p0x;
-        curves[ idx + 1 ] = p0y;
-        curves[ idx + 2 ] = q1x;
-        curves[ idx + 3 ] = q1y;
-        curves[ idx + 4 ] = p2x;
-        curves[ idx + 5 ] = p2y;
-        _writeIndex = idx + 6;
-        return 6;
+        var qx = (ax + bx) * 0.5;
+        var qy = (ay + by) * 0.5;
+        curves[ idx ] = qx;
+        curves[ idx + 1 ] = qy;
+        curves[ idx + 2 ] = bx;
+        curves[ idx + 3 ] = by;
+        // update pen
+        ax = bx;
+        ay = by;
+        count++;
+        return 4;
     }
     public inline
-    function addQuad( p0x: Float, p0y: Float
-                    , p1x: Float, p1y: Float
-                    , p2x: Float, p2y: Float ): Int {
-        curves[ idx ]     = p0x;
-        curves[ idx + 1 ] = p0y;
-        curves[ idx + 2 ] = p1x;
-        curves[ idx + 3 ] = p1y;
-        curves[ idx + 4 ] = p2x;
-        curves[ idx + 5 ] = p2y;
-        _writeIndex = idx + 6;
-        return 6;
+    function quadTo( bx: Float, by: Float
+                   , cx: Float, cy: Float ): Int {
+        var idx = count << 2;
+        curves[ idx ] = bx;
+        curves[ idx + 1 ] = by;
+        curves[ idx + 2 ] = cx;
+        curves[ idx + 3 ] = cy;
+        // update pen
+        ax = cx;
+        ay = cy;
+        count++;
+        return 4;
     }
     public inline 
-    function addCubic( p0x: Float, p0y: Float
-                     , p1x: Float, p1y: Float
-                     , p2x: Float, p2y: Float
-                     , p3x: Float, p3y: Float ): Int {
-        return addCubicCurve( p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y, Adaptive );
+    function cubicTo(  bx: Float, by: Float
+                     , cx: Float, dy: Float
+                     , dx: Float, cy: Float ): Int {
+        return addCubicCurve( bx, by, cx, cy, dx, dy, Adaptive );
     }
-    public inline function addCubicCurve(  p0x: Float, p0y: Float
-                                         , p1x: Float, p1y: Float
-                                         , p2x: Float, p2y: Float
-                                         , p3x: Float, p3y: Float
+    public inline function addCubicCurve(  bx: Float, by: Float
+                                         , cx: Float, cy: Float
+                                         , dx: Float, dy: Float
                                          , mode: OptimizationMode
                                          , errorMargin: Float = 0.5
                                          , maxDepth: Int = 5 ): Int {
-        var startIndex = _writeIndex;
+        var startIndex = count;
         var runAccurate = ( mode == Accurate );
         if( mode == Adaptive ) {
-            var dx1 = p1x - p0x;
-            var dy1 = p1y - p0y; 
-            var dx2 = p3x - p2x;
-            var dy2 = p3y - p2y; 
+            var dx1 = bx - ax;
+            var dy1 = by - ay; 
+            var dx2 = dx - cx;
+            var dy2 = dy - cy; 
             var crossHandles = dx1 * dy2 - dy1 * dx2;
-            var dxBase = p3x - p0x;
-            var dyBase = p3y - p0y;
-            var side1 = dxBase * (p1y - p0y) - dyBase * (p1x - p0x);
-            var side2 = dxBase * (p2y - p0y) - dyBase * (p2x - p0x);
+            var dxBase = dx - ax;
+            var dyBase = dy - ay;
+            var side1 = dxBase * (by - ay) - dyBase * (bx - ax);
+            var side2 = dxBase * (cy - ay) - dyBase * (cx - ax);
             var isProblematic = ( side1 * side2 < -0.01 ) || (Math.abs( crossHandles ) < 0.05 && ( dx1 * dx1 + dy1 * dy1 > 1.0 ));
             if( isProblematic ){
                 runAccurate = true;
@@ -98,43 +105,43 @@ class QuadCurveBuilder {
         }
         if( runAccurate || mode == Accurate ){
             var errorMarginSquared = errorMargin * errorMargin;
-            subdivideAccurate( p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y, errorMarginSquared, 0, maxDepth );
+            subdivideAccurate( bx, by, cx, cy, dx, dy, errorMarginSquared, 0, maxDepth );
         } else {
-            subdividePerformance( p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y, 0, 3 );
+            subdividePerformance( bx, by, cx, cy, dx, dy, 0, 3 );
         }
-        return _writeIndex - startIndex; 
+        return count - startIndex; 
     }
 
-    private function subdivideAccurate(  p0x: Float, p0y: Float
-                                       , p1x: Float, p1y: Float
-                                       , p2x: Float, p2y: Float
-                                       , p3x: Float, p3y: Float
-                                       , errorMarginSquared: Float
-                                       , currentDepth: Int
-                                       , maxDepth: Int
+    function subdivideAccurate(  bx: Float, by: Float
+                               , cx: Float, cy: Float
+                               , dx: Float, dy: Float
+                               , errorMarginSquared: Float
+                               , currentDepth: Int
+                               , maxDepth: Int
     ):Void {
-        var dx = p3x - 3.0 * p2x + 3.0 * p1x - p0x;
-        var dy = p3y - 3.0 * p2y + 3.0 * p1y - p0y;
-        var estimatedErrorSquared = (dx * dx + dy * dy) * 0.009259259259259259;
+        var dx_ = dx - 3.0 * cx + 3.0 * bx - ax;
+        var dy_ = dy - 3.0 * cy + 3.0 * by - ay;
+        var estimatedErrorSquared = (dx_ * dx_ + dy_ * dy_) * 0.009259259259259259;
         if( estimatedErrorSquared <= errorMarginSquared || currentDepth >= maxDepth ){
-            var q1x:Float = (3.0 * p1x - p0x + 3.0 * p2x - p3x) * 0.25;
-            var q1y:Float = (3.0 * p1y - p0y + 3.0 * p2y - p3y) * 0.25;
-            var idx = writeIndex;
-            curves[ idx ]     = p0x;
-            curves[ idx + 1 ] = p0y;
-            curves[ idx + 2 ] = q1x;
-            curves[ idx + 3 ] = q1y;
-            curves[ idx + 4 ] = p3x;
-            curves[ idx + 5 ] = p3y;
-            writeIndex = idx + 6;
+            var qx = (3.0 * bx - ax + 3.0 * cx - dx) * 0.25;
+            var qy = (3.0 * by - ay + 3.0 * cy - dy) * 0.25;
+            var idx = count << 2;
+            curves[ idx ] = qx;
+            curves[ idx + 1 ] = qy;
+            curves[ idx + 2 ] = dx;
+            curves[ idx + 3 ] = dy;
+            // update pen
+            ax = dx;
+            ay = dy;
+            count++;
             return;
         }
-        var midL1x = ( p0x + p1x ) * 0.5; 
-        var midL1y = ( p0y + p1y ) * 0.5;
-        var midMx  = ( p1x + p2x ) * 0.5;
-        var midMy  = ( p1y + p2y ) * 0.5;
-        var midR2x = ( p2x + p3x ) * 0.5;
-        var midR2y = ( p2y + p3y ) * 0.5;
+        var midL1x = ( ax + bx ) * 0.5; 
+        var midL1y = ( ay + by ) * 0.5;
+        var midMx  = ( bx + cx ) * 0.5;
+        var midMy  = ( by + cy ) * 0.5;
+        var midR2x = ( cx + dx ) * 0.5;
+        var midR2y = ( cy + dy ) * 0.5;
         var midL2x = ( midL1x + midMx ) * 0.5;
         var midL2y = ( midL1y + midMy ) * 0.5;
         var midR1x = ( midMx + midR2x ) * 0.5;
@@ -142,34 +149,37 @@ class QuadCurveBuilder {
         var splitX = ( midL2x + midR1x ) * 0.5;
         var splitY = ( midL2y + midR1y ) * 0.5;
         var nextDepth = currentDepth + 1;
-        subdivideAccurate( p0x, p0y, midL1x, midL1y, midL2x, midL2y, splitX, splitY, errorMarginSquared, nextDepth, maxDepth );
-        subdivideAccurate( splitX, splitY, midR1x, midR1y, midR2x, midR2y, p3x, p3y, errorMarginSquared, nextDepth, maxDepth );
+        subdivideAccurate( midL1x, midL1y, midL2x, midL2y, splitX, splitY, errorMarginSquared, nextDepth, maxDepth );
+        // make sure pen is correct
+        ax = splitX;
+        ay = splitY;
+        subdivideAccurate( splitY, midR1x, midR1y, midR2x, midR2y, dx, dy, errorMarginSquared, nextDepth, maxDepth );
     }
 
-    private function subdividePerformance(  p0x: Float, p0y: Float
-                                          , p1x: Float, p1y: Float
-                                          , p2x: Float, p2y: Float
-                                          , p3x: Float, p3y:Float
-                                          , currentDepth:Int, maxDepth:Int ):Void {
+    function subdividePerformance(  bx: Float, by: Float
+                                  , cx: Float, cy: Float
+                                  , dx: Float, dy:Float
+                                  , currentDepth:Int, maxDepth:Int ):Void {
         if( currentDepth >= maxDepth ){
-            var q1x = ( 3.0 * p1x - p0x + 3.0 * p2x - p3x ) * 0.25;
-            var q1y = ( 3.0 * p1y - p0y + 3.0 * p2y - p3y ) * 0.25;
-            var idx = writeIndex;
-            curves[ idx ]     = p0x;
-            curves[ idx + 1 ] = p0y;
-            curves[ idx + 2 ] = q1x;
-            curves[ idx + 3 ] = q1y;
-            curves[ idx + 4 ] = p3x;
-            curves[ idx + 5 ] = p3y;
-            writeIndex = idx + 6;
+            var qx = ( 3.0 * bx - ax + 3.0 * cx - dx ) * 0.25;
+            var qy = ( 3.0 * by - ay + 3.0 * cy - dy ) * 0.25;
+            var idx = count << 2;
+            curves[ idx ] = qx;
+            curves[ idx + 1 ] = qy;
+            curves[ idx + 2 ] = dx;
+            curves[ idx + 3 ] = dy;
+            // update pen
+            ax = dx;
+            ay = dy;
+            count++;
             return;
         }
-        var midL1x = ( p0x + p1x ) * 0.5;
-        var midL1y = ( p0y + p1y ) * 0.5;
-        var midMx  = ( p1x + p2x ) * 0.5;
-        var midMy  = ( p1y + p2y ) * 0.5;
-        var midR2x = ( p2x + p3x ) * 0.5;
-        var midR2y = ( p2y + p3y ) * 0.5;
+        var midL1x = ( ax + bx ) * 0.5;
+        var midL1y = ( ay + by ) * 0.5;
+        var midMx  = ( bx + cx ) * 0.5;
+        var midMy  = ( by + cy ) * 0.5;
+        var midR2x = ( cx + dx ) * 0.5;
+        var midR2y = ( cy + dy ) * 0.5;
         var midL2x = ( midL1x + midMx ) * 0.5;
         var midL2y = ( midL1y + midMy ) * 0.5;
         var midR1x = ( midMx + midR2x ) * 0.5;
@@ -177,7 +187,10 @@ class QuadCurveBuilder {
         var splitX = ( midL2x + midR1x ) * 0.5;
         var splitY = ( midL2y + midR1y ) * 0.5;
         var nextDepth = currentDepth + 1;
-        subdividePerformance( p0x, p0y, midL1x, midL1y, midL2x, midL2y, splitX, splitY, nextDepth, maxDepth );
-        subdividePerformance( splitX, splitY, midR1x, midR1y, midR2x, midR2y, p3x, p3y, nextDepth, maxDepth );
+        subdividePerformance( midL1x, midL1y, midL2x, midL2y, splitX, splitY, nextDepth, maxDepth );
+        // make sure pen is correct
+        ax = splitX;
+        ay = splitY;
+        subdividePerformance( midR1x, midR1y, midR2x, midR2y, dx, dy, nextDepth, maxDepth );
     }
 }
