@@ -34,6 +34,7 @@ class QuadCurveBuilder {
         count = 0;
         #if !(cpp || cppia || hl || jvm || java)
             this.curves.resize( 0 );
+            this.curveBounds.resize( 0 );
         #end
     }
     public var length(get, null): Int;
