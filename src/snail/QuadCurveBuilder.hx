@@ -114,7 +114,7 @@ class QuadCurveBuilder {
         return count - startIndex; 
     }
 
-    static function subdivideAccurate(  builder: QuadCurveBeulder, px: Float, py: Float
+    static function subdivideAccurate(  builder: QuadCurveBuilder, px: Float, py: Float
                                , bx: Float, by: Float
                                , cx: Float, cy: Float
                                , dx: Float, dy: Float
@@ -122,6 +122,7 @@ class QuadCurveBuilder {
                                , currentDepth: Int
                                , maxDepth: Int
     ):Void {
+        var curves = builder.curves;
         var dx_ = dx - 3.0 * cx + 3.0 * bx - px;
         var dy_ = dy - 3.0 * cy + 3.0 * by - py;
         var estimatedErrorSquared = (dx_ * dx_ + dy_ * dy_) * 0.009259259259259259;
@@ -158,6 +159,7 @@ class QuadCurveBuilder {
                                   , cx: Float, cy: Float
                                   , dx: Float, dy:Float
                                   , currentDepth:Int, maxDepth:Int ):Void {
+        var curves = builder.curves;
         if( currentDepth >= maxDepth ){
             var qx = ( 3.0 * bx - px + 3.0 * cx - dx ) * 0.25;
             var qy = ( 3.0 * by - py + 3.0 * cy - dy ) * 0.25;
