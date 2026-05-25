@@ -1,4 +1,5 @@
 package snail;
+import snail.justGraphix.IPathContext;
 
 // --- MULTI-TARGET BUFFER ALIAS ---
 #if (cpp || cppia || hl || jvm || java)
@@ -13,7 +14,7 @@ enum abstract OptimizationMode(Int) {
     var Adaptive;
 }
 
-class QuadCurveBuilder {
+class QuadCurveBuilder implements IPathContext {
     public var curves( default, null ): Buffer;
     public var curveBounds( default, null ): Buffer;
     public var indices(default, null):Array<Int>;
