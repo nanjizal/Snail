@@ -16,7 +16,6 @@ enum abstract OptimizationMode(Int) {
 class QuadCurveBuilder {
     public var curves( default, null ): Buffer;
     private var writeIndex:Int = 0;
-
     public function new( size: Int = 2048 ) {
         #if (cpp || cppia || hl || jvm || java)
             this.curves = new haxe.ds.Vector<Float>( size );
@@ -24,26 +23,61 @@ class QuadCurveBuilder {
             this.curves = new Array<Float>();
         #end
     }
-
-    public inline function clear():Void {
+    public inline
+    function clear():Void {
         writeIndex = 0;
         #if !(cpp || cppia || hl || jvm || java)
             this.curves.resize( 0 );
         #end
     }
-
     public var length(get, null):Int;
-    private inline function get_length():Int { 
+    private inline
+    function get_length():Int { 
         return writeIndex; 
     }
-
+    public inline
+    function addLine( p0x: Float, p0y: Float
+                    , p2x: Float, p2y: Float ): Int {
+        var idx = _writeIndex;
+        // midpoint
+        var q1x = (p0x + p2x) * 0.5;
+        var q1y = (p0y + p2y) * 0.5;
+        curves[ idx ]     = p0x;
+        curves[ idx + 1 ] = p0y;
+        curves[ idx + 2 ] = q1x;
+        curves[ idx + 3 ] = q1y;
+        curves[ idx + 4 ] = p2x;
+        curves[ idx + 5 ] = p2y;
+        _writeIndex = idx + 6;
+        return 6;
+    }
+    public inline
+    function addQuad( p0x: Float, p0y: Float
+                    , p1x: Float, p1y: Float
+                    , p2x: Float, p2y: Float ): Int {
+        curves[ idx ]     = p0x;
+        curves[ idx + 1 ] = p0y;
+        curves[ idx + 2 ] = p1x;
+        curves[ idx + 3 ] = p1y;
+        curves[ idx + 4 ] = p2x;
+        curves[ idx + 5 ] = p2y;
+        _writeIndex = idx + 6;
+        return 6;
+    }
+    public inline 
+    function addCubic( p0x: Float, p0y: Float
+                     , p1x: Float, p1y: Float
+                     , p2x: Float, p2y: Float
+                     , p3x: Float, p3y: Float ): Int {
+        return addCubicCurve( p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y, Adaptive );
+    }
     public inline function addCubicCurve(  p0x: Float, p0y: Float
                                          , p1x: Float, p1y: Float
                                          , p2x: Float, p2y: Float
                                          , p3x: Float, p3y: Float
                                          , mode: OptimizationMode
                                          , errorMargin: Float = 0.5
-                                         , maxDepth: Int = 5 ):Int {
+                                         , maxDepth: Int = 5 ): Int {
         var startIndex = _writeIndex;
         var runAccurate = ( mode == Accurate );
         if( mode == Adaptive ) {
