@@ -105,26 +105,27 @@ class QuadCurveBuilder {
         }
         if( runAccurate || mode == Accurate ){
             var errorMarginSquared = errorMargin * errorMargin;
-            subdivideAccurate( bx, by, cx, cy, dx, dy, errorMarginSquared, 0, maxDepth );
+            subdivideAccurate( ax, ay, bx, by, cx, cy, dx, dy, errorMarginSquared, 0, maxDepth );
         } else {
-            subdividePerformance( bx, by, cx, cy, dx, dy, 0, 3 );
+            subdividePerformance( ax, ay, bx, by, cx, cy, dx, dy, 0, 3 );
         }
         return count - startIndex; 
     }
 
-    function subdivideAccurate(  bx: Float, by: Float
+    function subdivideAccurate(  px: Float, py: Float
+                                 bx: Float, by: Float
                                , cx: Float, cy: Float
                                , dx: Float, dy: Float
                                , errorMarginSquared: Float
                                , currentDepth: Int
                                , maxDepth: Int
     ):Void {
-        var dx_ = dx - 3.0 * cx + 3.0 * bx - ax;
-        var dy_ = dy - 3.0 * cy + 3.0 * by - ay;
+        var dx_ = dx - 3.0 * cx + 3.0 * bx - px;
+        var dy_ = dy - 3.0 * cy + 3.0 * by - py;
         var estimatedErrorSquared = (dx_ * dx_ + dy_ * dy_) * 0.009259259259259259;
         if( estimatedErrorSquared <= errorMarginSquared || currentDepth >= maxDepth ){
-            var qx = (3.0 * bx - ax + 3.0 * cx - dx) * 0.25;
-            var qy = (3.0 * by - ay + 3.0 * cy - dy) * 0.25;
+            var qx = (3.0 * bx - px + 3.0 * cx - dx) * 0.25;
+            var qy = (3.0 * by - py + 3.0 * cy - dy) * 0.25;
             var idx = count << 2;
             curves[ idx ] = qx;
             curves[ idx + 1 ] = qy;
@@ -136,8 +137,8 @@ class QuadCurveBuilder {
             count++;
             return;
         }
-        var midL1x = ( ax + bx ) * 0.5; 
-        var midL1y = ( ay + by ) * 0.5;
+        var midL1x = ( px + bx ) * 0.5; 
+        var midL1y = ( py + by ) * 0.5;
         var midMx  = ( bx + cx ) * 0.5;
         var midMy  = ( by + cy ) * 0.5;
         var midR2x = ( cx + dx ) * 0.5;
@@ -149,20 +150,21 @@ class QuadCurveBuilder {
         var splitX = ( midL2x + midR1x ) * 0.5;
         var splitY = ( midL2y + midR1y ) * 0.5;
         var nextDepth = currentDepth + 1;
-        subdivideAccurate( midL1x, midL1y, midL2x, midL2y, splitX, splitY, errorMarginSquared, nextDepth, maxDepth );
+        subdivideAccurate( px, py, midL1x, midL1y, midL2x, midL2y, splitX, splitY, errorMarginSquared, nextDepth, maxDepth );
         // make sure pen is correct
         ax = splitX;
         ay = splitY;
-        subdivideAccurate( midR1x, midR1y, midR2x, midR2y, dx, dy, errorMarginSquared, nextDepth, maxDepth );
+        subdivideAccurate( splitX, splitY, midR1x, midR1y, midR2x, midR2y, dx, dy, errorMarginSquared, nextDepth, maxDepth );
     }
 
-    function subdividePerformance(  bx: Float, by: Float
+    function subdividePerformance(  px: Float, py: Float 
+                                  , bx: Float, by: Float
                                   , cx: Float, cy: Float
                                   , dx: Float, dy:Float
                                   , currentDepth:Int, maxDepth:Int ):Void {
         if( currentDepth >= maxDepth ){
-            var qx = ( 3.0 * bx - ax + 3.0 * cx - dx ) * 0.25;
-            var qy = ( 3.0 * by - ay + 3.0 * cy - dy ) * 0.25;
+            var qx = ( 3.0 * bx - px + 3.0 * cx - dx ) * 0.25;
+            var qy = ( 3.0 * by - py + 3.0 * cy - dy ) * 0.25;
             var idx = count << 2;
             curves[ idx ] = qx;
             curves[ idx + 1 ] = qy;
@@ -174,8 +176,8 @@ class QuadCurveBuilder {
             count++;
             return;
         }
-        var midL1x = ( ax + bx ) * 0.5;
-        var midL1y = ( ay + by ) * 0.5;
+        var midL1x = ( px + bx ) * 0.5;
+        var midL1y = ( py + by ) * 0.5;
         var midMx  = ( bx + cx ) * 0.5;
         var midMy  = ( by + cy ) * 0.5;
         var midR2x = ( cx + dx ) * 0.5;
@@ -187,10 +189,10 @@ class QuadCurveBuilder {
         var splitX = ( midL2x + midR1x ) * 0.5;
         var splitY = ( midL2y + midR1y ) * 0.5;
         var nextDepth = currentDepth + 1;
-        subdividePerformance( midL1x, midL1y, midL2x, midL2y, splitX, splitY, nextDepth, maxDepth );
+        subdividePerformance( px, py, midL1x, midL1y, midL2x, midL2y, splitX, splitY, nextDepth, maxDepth );
         // make sure pen is correct
         ax = splitX;
         ay = splitY;
-        subdividePerformance( midR1x, midR1y, midR2x, midR2y, dx, dy, nextDepth, maxDepth );
+        subdividePerformance( splitX, splitY, midR1x, midR1y, midR2x, midR2y, dx, dy, nextDepth, maxDepth );
     }
 }
