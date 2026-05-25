@@ -63,7 +63,7 @@ class QuadCurveBuilder {
         curves[ idx + 1 ] = qy;
         curves[ idx + 2 ] = bx;
         curves[ idx + 3 ] = by;
-        pushYbounds( ay, by, cy );
+        pushYbounds( ay, qy, by );
         // update pen
         ax = bx;
         ay = by;
