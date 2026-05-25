@@ -75,8 +75,8 @@ class QuadCurveBuilder {
     }
     public inline 
     function cubicTo(  bx: Float, by: Float
-                     , cx: Float, dy: Float
-                     , dx: Float, cy: Float ): Int {
+                     , cx: Float, cy: Float
+                     , dx: Float, dy: Float ): Int {
         return addCubicCurve( bx, by, cx, cy, dx, dy, Adaptive );
     }
     public inline function addCubicCurve(  bx: Float, by: Float
