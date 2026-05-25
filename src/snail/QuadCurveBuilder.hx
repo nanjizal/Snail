@@ -15,6 +15,7 @@ enum abstract OptimizationMode(Int) {
 
 class QuadCurveBuilder {
     public var curves( default, null ): Buffer;
+    public var curveBounds( default, null ): Buffer;
     var count:Int = 0;
     // pen position
     var ax: Float = 0.;
@@ -39,6 +40,15 @@ class QuadCurveBuilder {
         return count << 2; 
     }
     public inline
+    function pushYbounds( ay: Float, by: Float, cy: Float ): Void {
+        var i = count << 1; 
+        var ab = (ay < by); 
+        var ac = (ay < cy); 
+        var bc = (by < cy);
+        curveBounds[i]     = ab ? (ac ? ay : cy) : (bc ? by : cy);
+        curveBounds[i + 1] = ab ? (bc ? cy : by) : (ac ? cy : ay);
+    }
+    public inline
     function moveTo( x: Float, y: Float ){
         ax = x;
         ay = y;
@@ -53,6 +63,7 @@ class QuadCurveBuilder {
         curves[ idx + 1 ] = qy;
         curves[ idx + 2 ] = bx;
         curves[ idx + 3 ] = by;
+        pushYbounds( ay, by, cy );
         // update pen
         ax = bx;
         ay = by;
@@ -67,6 +78,7 @@ class QuadCurveBuilder {
         curves[ idx + 1 ] = by;
         curves[ idx + 2 ] = cx;
         curves[ idx + 3 ] = cy;
+        pushYbounds( ay, by, cy );
         // update pen
         ax = cx;
         ay = cy;
@@ -134,6 +146,7 @@ class QuadCurveBuilder {
             curves[ idx + 1 ] = qy;
             curves[ idx + 2 ] = dx;
             curves[ idx + 3 ] = dy;
+            builder.pushYbounds( py, qy, dy );
             builder.count++;
             return;
         }
@@ -168,6 +181,7 @@ class QuadCurveBuilder {
             curves[ idx + 1 ] = qy;
             curves[ idx + 2 ] = dx;
             curves[ idx + 3 ] = dy;
+            builder.pushYbounds( py, qy, dy );
             builder.count++;
             return;
         }
