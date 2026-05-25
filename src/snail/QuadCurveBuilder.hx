@@ -23,8 +23,10 @@ class QuadCurveBuilder {
     public function new( size: Int = 2048 ) {
         #if (cpp || cppia || hl || jvm || java)
             this.curves = new haxe.ds.Vector<Float>( size );
+            this.curveBounds = new haxe.ds.Vector<Float>( Std.int(size / 2) );
         #else
             this.curves = new Array<Float>();
+            this.curveBounds = new Array<Float>();
         #end
     }
     public inline
