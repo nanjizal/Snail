@@ -105,15 +105,17 @@ class QuadCurveBuilder {
         }
         if( runAccurate || mode == Accurate ){
             var errorMarginSquared = errorMargin * errorMargin;
-            subdivideAccurate( ax, ay, bx, by, cx, cy, dx, dy, errorMarginSquared, 0, maxDepth );
+            subdivideAccurate( this, ax, ay, bx, by, cx, cy, dx, dy, errorMarginSquared, 0, maxDepth );
         } else {
-            subdividePerformance( ax, ay, bx, by, cx, cy, dx, dy, 0, 3 );
+            subdividePerformance( this, ax, ay, bx, by, cx, cy, dx, dy, 0, 3 );
         }
+        ax = dx;
+        ay = dy;
         return count - startIndex; 
     }
 
-    function subdivideAccurate(  px: Float, py: Float
-                                 bx: Float, by: Float
+    static function subdivideAccurate(  builder: QuadCurveBeulder, px: Float, py: Float
+                               , bx: Float, by: Float
                                , cx: Float, cy: Float
                                , dx: Float, dy: Float
                                , errorMarginSquared: Float
@@ -126,15 +128,12 @@ class QuadCurveBuilder {
         if( estimatedErrorSquared <= errorMarginSquared || currentDepth >= maxDepth ){
             var qx = (3.0 * bx - px + 3.0 * cx - dx) * 0.25;
             var qy = (3.0 * by - py + 3.0 * cy - dy) * 0.25;
-            var idx = count << 2;
+            var idx = builder.count << 2;
             curves[ idx ] = qx;
             curves[ idx + 1 ] = qy;
             curves[ idx + 2 ] = dx;
             curves[ idx + 3 ] = dy;
-            // update pen
-            ax = dx;
-            ay = dy;
-            count++;
+            builder.count++;
             return;
         }
         var midL1x = ( px + bx ) * 0.5; 
@@ -150,14 +149,11 @@ class QuadCurveBuilder {
         var splitX = ( midL2x + midR1x ) * 0.5;
         var splitY = ( midL2y + midR1y ) * 0.5;
         var nextDepth = currentDepth + 1;
-        subdivideAccurate( px, py, midL1x, midL1y, midL2x, midL2y, splitX, splitY, errorMarginSquared, nextDepth, maxDepth );
-        // make sure pen is correct
-        ax = splitX;
-        ay = splitY;
-        subdivideAccurate( splitX, splitY, midR1x, midR1y, midR2x, midR2y, dx, dy, errorMarginSquared, nextDepth, maxDepth );
+        subdivideAccurate( builder, px, py, midL1x, midL1y, midL2x, midL2y, splitX, splitY, errorMarginSquared, nextDepth, maxDepth );
+        subdivideAccurate( builder, splitX, splitY, midR1x, midR1y, midR2x, midR2y, dx, dy, errorMarginSquared, nextDepth, maxDepth );
     }
 
-    function subdividePerformance(  px: Float, py: Float 
+    static function subdividePerformance(  builder: QuadCurveBuilder, px: Float, py: Float 
                                   , bx: Float, by: Float
                                   , cx: Float, cy: Float
                                   , dx: Float, dy:Float
@@ -165,15 +161,12 @@ class QuadCurveBuilder {
         if( currentDepth >= maxDepth ){
             var qx = ( 3.0 * bx - px + 3.0 * cx - dx ) * 0.25;
             var qy = ( 3.0 * by - py + 3.0 * cy - dy ) * 0.25;
-            var idx = count << 2;
+            var idx = builder.count << 2;
             curves[ idx ] = qx;
             curves[ idx + 1 ] = qy;
             curves[ idx + 2 ] = dx;
             curves[ idx + 3 ] = dy;
-            // update pen
-            ax = dx;
-            ay = dy;
-            count++;
+            builder.count++;
             return;
         }
         var midL1x = ( px + bx ) * 0.5;
@@ -189,10 +182,7 @@ class QuadCurveBuilder {
         var splitX = ( midL2x + midR1x ) * 0.5;
         var splitY = ( midL2y + midR1y ) * 0.5;
         var nextDepth = currentDepth + 1;
-        subdividePerformance( px, py, midL1x, midL1y, midL2x, midL2y, splitX, splitY, nextDepth, maxDepth );
-        // make sure pen is correct
-        ax = splitX;
-        ay = splitY;
-        subdividePerformance( splitX, splitY, midR1x, midR1y, midR2x, midR2y, dx, dy, nextDepth, maxDepth );
+        subdividePerformance( builder, px, py, midL1x, midL1y, midL2x, midL2y, splitX, splitY, nextDepth, maxDepth );
+        subdividePerformance( builder, splitX, splitY, midR1x, midR1y, midR2x, midR2y, dx, dy, nextDepth, maxDepth );
     }
 }
