@@ -28,7 +28,7 @@ class QuadCurveBuilder {
     }
     public inline
     function clear():Void {
-        writeIndex = 0;
+        count = 0;
         #if !(cpp || cppia || hl || jvm || java)
             this.curves.resize( 0 );
         #end
